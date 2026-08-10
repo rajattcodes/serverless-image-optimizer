@@ -1,0 +1,35 @@
+{
+  "Records": [
+    {
+      "eventVersion": "2.1",
+      "eventSource": "aws:s3",
+      "awsRegion": "us-east-1",
+      "eventTime": "2026-08-11T10:00:00.000Z",
+      "eventName": "ObjectCreated:Put",
+      "userIdentity": {
+        "principalId": "EXAMPLE"
+      },
+      "requestParameters": {
+        "sourceIPAddress": "203.0.113.1"
+      },
+      "responseElements": {
+        "x-amz-request-id": "EXAMPLE123456789",
+        "x-amz-id-2": "EXAMPLEabcdefghijklmnop"
+      },
+      "s3": {
+        "s3SchemaVersion": "1.0",
+        "configurationId": "serverless-image-optimizer-trigger",
+        "bucket": {
+          "name": "source-images-example",
+          "arn": "arn:aws:s3:::source-images-example"
+        },
+        "object": {
+          "key": "uploads/summer+photo.jpg",
+          "size": 1048576,
+          "eTag": "0123456789abcdef0123456789abcdef",
+          "sequencer": "0065BAA1B2C3D4E5F6"
+        }
+      }
+    }
+  ]
+}
