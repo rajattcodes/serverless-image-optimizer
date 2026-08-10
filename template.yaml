@@ -1,0 +1,97 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Event-driven S3 image optimization with Lambda and Sharp.
+
+Resources:
+  SourceImagesBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  OptimizedImagesBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  ImageOptimizerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: ImageOptimizerLeastPrivilege
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: ReadSourceImages
+                Effect: Allow
+                Action: s3:GetObject
+                Resource: !Sub '${SourceImagesBucket.Arn}/*'
+              - Sid: WriteOptimizedImages
+                Effect: Allow
+                Action: s3:PutObject
+                Resource: !Sub '${OptimizedImagesBucket.Arn}/*'
+              - Sid: CreateFunctionLogGroup
+                Effect: Allow
+                Action: logs:CreateLogGroup
+                Resource: '*'
+              - Sid: WriteFunctionLogs
+                Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${AWS::StackName}-image-optimizer:*'
+
+  ImageOptimizerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${AWS::StackName}-image-optimizer'
+      CodeUri: .
+      Handler: index.handler
+      Runtime: nodejs20.x
+      Architectures:
+        - x86_64
+      MemorySize: 1024
+      Timeout: 30
+      Role: !GetAtt ImageOptimizerRole.Arn
+      Environment:
+        Variables:
+          DESTINATION_BUCKET: !Ref OptimizedImagesBucket
+      Events:
+        SourceImageCreated:
+          Type: S3
+          Properties:
+            Bucket: !Ref SourceImagesBucket
+            Events: s3:ObjectCreated:*
+
+Outputs:
+  SourceImagesBucketName:
+    Description: Upload original images to this bucket.
+    Value: !Ref SourceImagesBucket
+  OptimizedImagesBucketName:
+    Description: Optimized WebP images are written to this bucket.
+    Value: !Ref OptimizedImagesBucket
+  ImageOptimizerFunctionName:
+    Description: Lambda function that processes uploaded images.
+    Value: !Ref ImageOptimizerFunction
